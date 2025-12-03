@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barrier-api
+    depends_on:
+      - db
+      - redis
+    environment:
+      # Настройки подключения к PostgreSQL
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: barrier_db
+      DB_USER: barrier_user
+      DB_PASSWORD: barrier_password
+
+      # Настройки Redis (пример)
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+
+      # Дополнительно (если используете подобные переменные в коде)
+      # APP_ENV: "development"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    container_name: barrier-postgres
+    environment:
+      POSTGRES_DB: barrier_db
+      POSTGRES_USER: barrier_user
+      POSTGRES_PASSWORD: barrier_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - barrier_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: barrier-redis
+    ports:
+      - "6379:6379"
+    # Для локальной разработки без пароля достаточно так.
+    # Если нужен пароль, можно добавить команду и переменные среды.
+    restart: unless-stopped
+
+volumes:
+  barrier_pg_data:

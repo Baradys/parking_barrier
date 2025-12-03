@@ -1,16 +1,20 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import engine, Base
 from app.db.redis import init_redis, close_redis
 from app.src.router import router
 
 
+async def init_models():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Управление жизненным циклом приложения"""
     # Startup
+    await init_models()      # создаём таблицы асинхронно
     await init_redis()
 
     yield
@@ -20,8 +24,6 @@ async def lifespan(app: FastAPI):
 
 
 def get_application():
-    Base.metadata.create_all(bind=engine)
-
     application = FastAPI(
         title="API Service",
         description="API Service for barrier control",
@@ -29,19 +31,10 @@ def get_application():
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
-        lifespan=lifespan
-    )
-
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        lifespan=lifespan,
     )
 
     application.include_router(router)
-
     return application
 
 

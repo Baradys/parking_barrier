@@ -11,6 +11,7 @@ from app.services.exit import generate_payment_link, get_parking_session, end_pa
 
 router = APIRouter()
 
+
 async def get_redis():
     """Dependency для получения Redis клиента"""
     return get_redis_client()
@@ -26,22 +27,19 @@ def get_park_info(barrier_id: int, db: Session = Depends(get_db)):
 
 
 @router.post('/enter_barrier/')
-async def enter_barrier(parking_data: ParkingData, db: Session = Depends(get_db), redis = Depends(get_redis)) -> dict:
-    try:
-        vehicle_info = await get_vehicle_by_plate_number(db, parking_data.plate_number)
-        await start_park_session(db, parking_data, vehicle_info, redis)
-        return {
-            'status': 'success',
-            'action': 'open_enter_barrier',
-            'data': {'vehicle': vehicle_info, 'parking': parking_data},
-            'message': 'barrier_opening',
-        }
-    except Exception as e:
-        return {'status': 'error', 'message': str(e)}
+async def enter_barrier(parking_data: ParkingData, db: Session = Depends(get_db), redis=Depends(get_redis)) -> dict:
+    vehicle_info = await get_vehicle_by_plate_number(db, parking_data.plate_number)
+    await start_park_session(db, parking_data, vehicle_info, redis)
+    return {
+        'status': 'success',
+        'action': 'open_enter_barrier',
+        'data': {'vehicle': vehicle_info, 'parking': parking_data},
+        'message': 'barrier_opening',
+    }
 
 
 @router.post('/exit_barrier/')
-async def exit_barrier(parking_data: ParkingData, db: Session = Depends(get_db), redis = Depends(get_redis)) -> dict:
+async def exit_barrier(parking_data: ParkingData, db: Session = Depends(get_db), redis=Depends(get_redis)) -> dict:
     vehicle_info = await get_vehicle_by_plate_number(db, parking_data.plate_number)
     is_expired = await redis.get(vehicle_info.plate_number) is not None
     parking_session = await get_parking_session(db, parking_data.plate_number) if is_expired else True

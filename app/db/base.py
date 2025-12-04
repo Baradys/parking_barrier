@@ -5,5 +5,5 @@ class Base(DeclarativeBase):
     pass
 
 
-class BaseStore(DeclarativeBase):
-    pass
+
+

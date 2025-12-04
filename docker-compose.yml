@@ -9,6 +9,7 @@ services:
     depends_on:
       - db
       - redis
+      - kafka
     environment:
       # Настройки подключения к PostgreSQL
       DB_HOST: db
@@ -17,11 +18,14 @@ services:
       DB_USER: barrier_user
       DB_PASSWORD: barrier_password
 
-      # Настройки Redis (пример)
+      # Настройки Redis
       REDIS_HOST: redis
       REDIS_PORT: "6379"
 
-      # Дополнительно (если используете подобные переменные в коде)
+      # Настройки Kafka для логирующей миддлвари
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LOG_TOPIC: http_logs
+
       # APP_ENV: "development"
     ports:
       - "8000:8000"
@@ -45,8 +49,35 @@ services:
     container_name: barrier-redis
     ports:
       - "6379:6379"
-    # Для локальной разработки без пароля достаточно так.
-    # Если нужен пароль, можно добавить команду и переменные среды.
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.0
+    container_name: barrier-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: barrier-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      # Дополнительный наружный порт для клиентов на хосте (если нужен)
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: barrier-zookeeper:2181
+      # Внутренний адрес для других контейнеров
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://barrier-kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     restart: unless-stopped
 
 volumes:

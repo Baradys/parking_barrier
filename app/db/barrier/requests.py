@@ -1,9 +1,14 @@
-from typing import Any, Coroutine
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.barrier.models.barrier import ParkingSession, Barrier
+
+
+async def create_barrier_object(session: AsyncSession, city: str, location: str, total_amount: int):
+    barrier = Barrier(city=city, location=location, total_amount=total_amount)
+    async with session as session:
+        session.add(barrier)
+        await session.commit()
 
 
 async def get_barrier_info(session, barrier_id: int) -> Barrier:
